@@ -1,4 +1,3 @@
-
 const FIELD_RANGES = {
   minute: [0, 59],
   hour: [0, 23],
@@ -7,6 +6,22 @@ const FIELD_RANGES = {
   "day of week": [1, 7] 
 };
 
+function range(start, end) {
+  const out = [];
+  for (let i = start; i <= end; i++) {
+    out.push(i);
+  }
+  return out;
+}
+
+function validateValues(field, values) {
+  const [min, max] = FIELD_RANGES[field];
+  for (const v of values) {
+    if (v < min || v > max) {
+      throw new Error(`Value "${v}" out of range for field "${field}" (${min}-${max})`);
+    }
+  }
+}
 
 function expandField(field, value) {
   const [min, max] = FIELD_RANGES[field];
@@ -18,35 +33,40 @@ function expandField(field, value) {
   if (value.includes("/")) {
     const [base, stepStr] = value.split("/");
     const step = parseInt(stepStr, 10);
+    if (isNaN(step) || step <= 0) {
+      throw new Error(`Invalid step "${stepStr}" for field "${field}"`);
+    }
     const baseRange = base === "*" ? range(min, max) : expandField(field, base);
-    return baseRange.filter(v => (v - baseRange[0]) % step === 0);
+    const result = baseRange.filter(v => (v - baseRange[0]) % step === 0);
+    validateValues(field, result);
+    return result;
   }
 
   if (value.includes("-")) {
     const [start, end] = value.split("-").map(Number);
-    return range(start, end);
+    if (isNaN(start) || isNaN(end) || start > end) {
+      throw new Error(`Invalid range "${value}" for field "${field}"`);
+    }
+    const result = range(start, end);
+    validateValues(field, result);
+    return result;
   }
 
   if (value.includes(",")) {
-    return value.split(",").flatMap(v => expandField(field, v));
+    const result = value.split(",").flatMap(v => expandField(field, v));
+    validateValues(field, result);
+    return result;
   }
 
   const num = parseInt(value, 10);
-  if (isNaN(num) || num < min || num > max) {
+  if (isNaN(num)) {
     throw new Error(`Invalid value "${value}" for field "${field}"`);
+  }
+  if (num < min || num > max) {
+    throw new Error(`Value "${num}" out of range for field "${field}" (${min}-${max})`);
   }
   return [num];
 }
-
-
-function range(start, end) {
-  const out = [];
-  for (let i = start; i <= end; i++) {
-    out.push(i);
-  }
-  return out;
-}
-
 
 export function parseCronExpression(input) {
   const parts = input.trim().split(/\s+/);
