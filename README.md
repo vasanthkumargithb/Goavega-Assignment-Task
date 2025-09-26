@@ -12,8 +12,8 @@
 - day of week   1 2 3 4 5
 - command       /usr/bin/find
 
-##Run
+## Run
 - node index.js "<your-cron-string>"
 
-##Example:
+## Example:
 - node index.js "0 12 * * 0 echo hello"
